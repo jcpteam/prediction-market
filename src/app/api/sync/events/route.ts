@@ -42,6 +42,7 @@ interface SyncStats {
 function getAllowedCreators(): string[] {
   const fixedCreators = [
     '0x1FD81E09dA67D84f02DB0c0eBabd5a217D1B928d', // Polymarket cloned markets on Amoy
+    '0xc26dacf369dc1ea12421b9104031cb5a2f8c9215'
   ]
   const envCreators = MARKET_CREATORS_ADDRESS
     ? MARKET_CREATORS_ADDRESS.split(',').map(addr => addr.trim()).filter(addr => addr.length > 0)
@@ -188,12 +189,12 @@ async function syncMarkets(): Promise<SyncStats> {
         continue
       }
 
-      // if (!allowedCreators.has(condition.creator)) {
-      //   skippedCreatorCount++
-      //   console.log(`🚫 Skipping market ${condition.id} - creator ${condition.creator} not in allowed list`)
-      //   cursor = conditionCursor
-      //   continue
-      // }
+      if (!allowedCreators.has(condition.creator)) {
+        skippedCreatorCount++
+        console.log(`🚫 Skipping market ${condition.id} - creator ${condition.creator} not in allowed list`)
+        cursor = conditionCursor
+        continue
+      }
 
       if (Date.now() - syncStartedAt >= SYNC_TIME_LIMIT_MS) {
         console.warn('⏹️ Time limit reached during market processing, aborting sync loop')
