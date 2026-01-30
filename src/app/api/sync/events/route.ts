@@ -188,12 +188,12 @@ async function syncMarkets(): Promise<SyncStats> {
         continue
       }
 
-      if (!allowedCreators.has(condition.creator)) {
-        skippedCreatorCount++
-        console.log(`🚫 Skipping market ${condition.id} - creator ${condition.creator} not in allowed list`)
-        cursor = conditionCursor
-        continue
-      }
+      // if (!allowedCreators.has(condition.creator)) {
+      //   skippedCreatorCount++
+      //   console.log(`🚫 Skipping market ${condition.id} - creator ${condition.creator} not in allowed list`)
+      //   cursor = conditionCursor
+      //   continue
+      // }
 
       if (Date.now() - syncStartedAt >= SYNC_TIME_LIMIT_MS) {
         console.warn('⏹️ Time limit reached during market processing, aborting sync loop')
