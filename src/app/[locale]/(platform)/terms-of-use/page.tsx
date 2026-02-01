@@ -5,7 +5,7 @@ export const metadata: Metadata = {
   description: `Terms of Use for ${process.env.NEXT_PUBLIC_SITE_NAME?.trim() ?? 'this site'}`,
 }
 
-export default function TermsOfUsePage() {
+export default function TermsOfUsePage(_: PageProps<'/[locale]/terms-of-use'>) {
   const siteName = process.env.NEXT_PUBLIC_SITE_NAME?.trim() ?? 'this site'
   const siteNameUpper = siteName.toUpperCase()
   const siteUrl = (process.env.SITE_URL?.trim()?.replace(/\/$/, '') ?? '') || undefined

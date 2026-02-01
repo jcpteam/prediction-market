@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   title: 'Settings',
 }
 
-export default async function SettingsPage() {
+export default async function SettingsPage(_: PageProps<'/[locale]/settings'>) {
   const user = await UserRepository.getCurrentUser({ disableCookieCache: true })
   if (!user) {
     notFound()

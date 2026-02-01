@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   title: 'Trading Settings',
 }
 
-export default async function TradingSettingsPage() {
+export default async function TradingSettingsPage(_: PageProps<'/[locale]/settings/trading'>) {
   const user = await UserRepository.getCurrentUser({ disableCookieCache: true })
   if (!user) {
     notFound()

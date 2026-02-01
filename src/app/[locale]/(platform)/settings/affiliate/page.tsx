@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   title: 'Affiliate Settings',
 }
 
-export default async function AffiliateSettingsPage() {
+export default async function AffiliateSettingsPage(_: PageProps<'/[locale]/settings/affiliate'>) {
   const user = await UserRepository.getCurrentUser({ disableCookieCache: true })
   const affiliateCode = user.affiliate_code
   const receiverAddress = user.proxy_wallet_address ?? user.address

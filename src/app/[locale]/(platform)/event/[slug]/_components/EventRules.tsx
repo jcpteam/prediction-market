@@ -45,7 +45,7 @@ function getResolverGradient(address?: string) {
 
 export default function EventRules({ event }: EventRulesProps) {
   const t = useExtracted()
-  const [rulesExpanded, setRulesExpanded] = useState(false)
+  const [isExpanded, setRulesExpanded] = useState(false)
 
   function formatRules(rules: string): string {
     if (!rules) {
@@ -243,18 +243,18 @@ export default function EventRules({ event }: EventRulesProps) {
     : null
 
   return (
-    <div className="rounded-xl border transition-all duration-200 ease-in-out">
+    <section className="rounded-xl border transition-all duration-500 ease-in-out">
       <button
         type="button"
-        onClick={() => setRulesExpanded(!rulesExpanded)}
+        onClick={() => setRulesExpanded(!isExpanded)}
         className={`
           flex w-full items-center justify-between rounded-xl p-4 text-left transition-colors
           hover:bg-muted/50
           focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background
           focus-visible:outline-none
-          ${rulesExpanded ? 'rounded-b-none' : ''}
+          ${isExpanded ? 'rounded-b-none' : ''}
         `}
-        aria-expanded={rulesExpanded}
+        aria-expanded={isExpanded}
       >
         <h3 className="text-lg font-medium">{t('Rules')}</h3>
         <span
@@ -262,7 +262,7 @@ export default function EventRules({ event }: EventRulesProps) {
           className={`
             pointer-events-none flex size-8 items-center justify-center rounded-md border bg-background
             text-muted-foreground transition
-            ${rulesExpanded ? 'bg-muted/50' : ''}
+            ${isExpanded ? 'bg-muted/50' : ''}
           `}
         >
           <svg
@@ -271,7 +271,7 @@ export default function EventRules({ event }: EventRulesProps) {
             viewBox="0 0 16 16"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
-            className={`transition-transform ${rulesExpanded ? 'rotate-180' : ''}`}
+            className={`transition-transform ${isExpanded ? 'rotate-180' : ''}`}
           >
             <path
               d="M4 6L8 10L12 6"
@@ -284,7 +284,15 @@ export default function EventRules({ event }: EventRulesProps) {
         </span>
       </button>
 
-      {rulesExpanded && (
+      <div
+        className={`
+          grid overflow-hidden transition-all duration-500 ease-in-out
+          ${isExpanded
+      ? 'pointer-events-auto grid-rows-[1fr] opacity-100'
+      : 'pointer-events-none grid-rows-[0fr] opacity-0'}
+        `}
+        aria-hidden={!isExpanded}
+      >
         <div className="overflow-hidden border-t border-border/30 px-3 pb-3">
           <div className="space-y-2 pt-3">
             {formattedRules && (
@@ -317,7 +325,7 @@ export default function EventRules({ event }: EventRulesProps) {
                 )}
           </div>
         </div>
-      )}
-    </div>
+      </div>
+    </section>
   )
 }

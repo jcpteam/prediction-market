@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   title: 'Notification Settings',
 }
 
-export default async function NotificationsSettingsPage() {
+export default async function NotificationsSettingsPage(_: PageProps<'/[locale]/settings/notifications'>) {
   const user = await UserRepository.getCurrentUser({ disableCookieCache: true })
   if (!user) {
     notFound()

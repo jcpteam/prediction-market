@@ -1,6 +1,6 @@
 import AdminCreateEventForm from '@/app/[locale]/admin/create-event/_components/AdminCreateEventForm'
 
-export default async function AdminCreateEventPage() {
+export default async function AdminCreateEventPage(_: PageProps<'/[locale]/admin/categories'>) {
   return (
     <section className="grid gap-4">
       <div className="grid gap-2">

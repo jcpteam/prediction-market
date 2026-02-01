@@ -1,6 +1,6 @@
 import AdminUsersTable from '@/app/[locale]/admin/(users)/_components/AdminUsersTable'
 
-export default async function AdminUsersPage() {
+export default async function AdminUsersPage(_: PageProps<'/[locale]/admin'>) {
   return (
     <section className="grid gap-4">
       <div className="grid gap-2">

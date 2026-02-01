@@ -74,7 +74,7 @@ export default function EventSingleMarketOrderBook({ market, eventSlug }: EventS
   }
 
   return (
-    <div className="overflow-hidden rounded-xl border transition-all duration-200 ease-in-out">
+    <section className="overflow-hidden rounded-xl border transition-all duration-500 ease-in-out">
       <button
         type="button"
         onClick={() => setIsExpanded(current => !current)}
@@ -118,8 +118,16 @@ export default function EventSingleMarketOrderBook({ market, eventSlug }: EventS
         </span>
       </button>
 
-      {isExpanded && (
-        <div className="border-t border-border/30">
+      <div
+        className={cn(
+          'grid overflow-hidden transition-all duration-500 ease-in-out',
+          isExpanded
+            ? 'pointer-events-auto grid-rows-[1fr] opacity-100'
+            : 'pointer-events-none grid-rows-[0fr] opacity-0',
+        )}
+        aria-hidden={!isExpanded}
+      >
+        <div className="overflow-hidden border-t border-border/30">
           <div
             className="flex flex-wrap items-center justify-between gap-3 border-b p-3 pb-0 text-sm font-semibold"
           >
@@ -166,8 +174,8 @@ export default function EventSingleMarketOrderBook({ market, eventSlug }: EventS
             eventSlug={eventSlug}
           />
         </div>
-      )}
-    </div>
+      </div>
+    </section>
   )
 }
 

@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   title: 'Portfolio',
 }
 
-export default async function PortfolioPage() {
+export default async function PortfolioPage(_: PageProps<'/[locale]/portfolio'>) {
   const user = await UserRepository.getCurrentUser()
   const userAddress = user?.proxy_wallet_address ?? ''
   const snapshotAddress = user?.proxy_wallet_address

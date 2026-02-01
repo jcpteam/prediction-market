@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   title: 'Mentions',
 }
 
-export default async function MentionsPage() {
+export default async function MentionsPage(_: PageProps<'/[locale]/mentions'>) {
   const { data, error } = await EventRepository.listEvents({
     tag: 'mentions',
   })

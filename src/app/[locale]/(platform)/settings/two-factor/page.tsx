@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   title: 'Two Factor Settings',
 }
 
-export default async function TwoFactorSettingsPage() {
+export default async function TwoFactorSettingsPage(_: PageProps<'/[locale]/settings/two-factor'>) {
   const user = await UserRepository.getCurrentUser({ disableCookieCache: true })
   if (!user) {
     notFound()

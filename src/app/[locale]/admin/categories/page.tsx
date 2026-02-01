@@ -1,6 +1,6 @@
 import AdminCategoriesTable from '@/app/[locale]/admin/categories/_components/AdminCategoriesTable'
 
-export default async function AdminCategoriesPage() {
+export default async function AdminCategoriesPage(_: PageProps<'/[locale]/admin/categories'>) {
   return (
     <section className="grid gap-4">
       <div className="grid gap-2">

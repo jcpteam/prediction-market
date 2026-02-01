@@ -1,6 +1,6 @@
 'use client'
 
-import type { Event, User } from '@/types'
+import type { ConditionChangeLogEntry, Event, User } from '@/types'
 import { ArrowUpIcon } from 'lucide-react'
 import { useExtracted } from 'next-intl'
 import dynamic from 'next/dynamic'
@@ -36,10 +36,17 @@ interface EventContentProps {
   event: Event
   user: User | null
   marketContextEnabled: boolean
+  changeLogEntries: ConditionChangeLogEntry[]
   marketSlug?: string
 }
 
-export default function EventContent({ event, user, marketContextEnabled, marketSlug }: EventContentProps) {
+export default function EventContent({
+  event,
+  user,
+  marketContextEnabled,
+  changeLogEntries: _changeLogEntries,
+  marketSlug,
+}: EventContentProps) {
   const t = useExtracted()
   const setEvent = useOrder(state => state.setEvent)
   const setMarket = useOrder(state => state.setMarket)
@@ -264,7 +271,7 @@ export default function EventContent({ event, user, marketContextEnabled, market
     <EventMarketChannelProvider markets={event.markets}>
       <EventOutcomeChanceProvider eventId={event.id}>
         <OrderLimitPriceSync />
-        <div className="grid gap-3" ref={contentRef}>
+        <div className="grid gap-6" ref={contentRef}>
           <EventHeader event={event} />
           <EventChart event={event} isMobile={isMobile} />
           <div
