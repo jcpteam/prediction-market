@@ -33,7 +33,7 @@ export default function LiveCommentsStatusIndicator({
             />
           </span>
         </TooltipTrigger>
-        <TooltipContent>
+        <TooltipContent collisionPadding={16}>
           {t('Live comments status: {status}', { status })}
         </TooltipContent>
       </Tooltip>

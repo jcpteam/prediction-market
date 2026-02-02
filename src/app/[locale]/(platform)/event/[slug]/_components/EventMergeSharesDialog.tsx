@@ -122,7 +122,7 @@ export default function EventMergeSharesDialog({
 
   async function handleSubmit() {
     if (!conditionId) {
-      toast.error('Select a market before merging shares.')
+      toast.error(t('Select a market before merging shares.'))
       return
     }
 
@@ -132,24 +132,24 @@ export default function EventMergeSharesDialog({
 
     const numericAmount = Number.parseFloat(amount)
     if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
-      setError('Enter a valid amount.')
+      setError(t('Enter a valid amount.'))
       return
     }
 
     if (!isWholeCentAmount(numericAmount)) {
-      setError('Amount must be in whole cents.')
+      setError(t('Amount must be in whole cents.'))
       return
     }
 
     const amountMicro = Math.floor(numericAmount * MICRO_UNIT + 1e-9)
     const availableMicro = Math.floor(numericAvailableShares * MICRO_UNIT + 1e-9)
     if (amountMicro > availableMicro) {
-      setError('Amount exceeds available shares.')
+      setError(t('Amount exceeds available shares.'))
       return
     }
 
     if (!user?.proxy_wallet_address) {
-      toast.error('Deploy your proxy wallet before merging shares.')
+      toast.error(t('Deploy your proxy wallet before merging shares.'))
       return
     }
 
@@ -214,8 +214,8 @@ export default function EventMergeSharesDialog({
         return
       }
 
-      toast.success('Merge shares', {
-        description: marketTitle ?? 'Request submitted.',
+      toast.success(t('Merge shares'), {
+        description: marketTitle ?? t('Request submitted.'),
         icon: <SuccessIcon />,
       })
       void queryClient.invalidateQueries({ queryKey: ['user-conditional-shares'] })
@@ -237,20 +237,26 @@ export default function EventMergeSharesDialog({
     }
     catch (error) {
       console.error('Failed to submit merge operation.', error)
-      toast.error('We could not submit your merge request. Please try again.')
+      toast.error(t('We could not submit your merge request. Please try again.'))
     }
     finally {
       setIsSubmitting(false)
     }
   }
 
-  const dialogTitle = 'Merge shares'
-  const dialogDescription = `Merge a share of ${t('Yes')} and ${t('No')} to get 1 USDC. You can do this to save cost when trying to get rid of a position.`
+  const dialogTitle = t('Merge shares')
+  const dialogDescription = t(
+    'Merge a share of {yes} and {no} to get 1 USDC. You can do this to save cost when trying to get rid of a position.',
+    {
+      yes: t('Yes'),
+      no: t('No'),
+    },
+  )
   const formBody = (
     <>
       <div className="space-y-2">
         <label className="text-sm font-semibold text-foreground" htmlFor="merge-shares-amount">
-          Amount
+          {t('Amount')}
         </label>
         <Input
           id="merge-shares-amount"
@@ -262,7 +268,7 @@ export default function EventMergeSharesDialog({
         />
         <div className="text-xs text-foreground/80">
           <span className="flex items-center gap-1">
-            Available shares:
+            {t('Available shares:')}
             <strong className="text-foreground">{formattedAvailableShares}</strong>
             <button
               type="button"
@@ -273,7 +279,7 @@ export default function EventMergeSharesDialog({
               onClick={handleMaxClick}
               disabled={numericAvailableShares <= 0}
             >
-              Max
+              {t('Max')}
             </button>
           </span>
           {error && <p className="text-xs text-destructive">{error}</p>}
@@ -287,7 +293,7 @@ export default function EventMergeSharesDialog({
         disabled={isSubmitting || !conditionId}
         onClick={handleSubmit}
       >
-        {isSubmitting ? 'Merging...' : 'Merge Shares'}
+        {isSubmitting ? t('Merging...') : t('Merge Shares')}
       </Button>
     </>
   )

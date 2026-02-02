@@ -110,7 +110,7 @@ export default function PredictionChartTooltipOverlay({
             {entry.name}
           </span>
           <span className="tabular-nums">
-            {entry.value.toFixed(1)}
+            {entry.value.toFixed(0)}
             %
           </span>
         </div>

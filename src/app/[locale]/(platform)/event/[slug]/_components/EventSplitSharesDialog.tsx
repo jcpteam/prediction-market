@@ -120,7 +120,7 @@ export default function EventSplitSharesDialog({
 
   async function handleSubmit() {
     if (!conditionId) {
-      toast.error('Select a market before splitting shares.')
+      toast.error(t('Select a market before splitting shares.'))
       return
     }
 
@@ -130,24 +130,24 @@ export default function EventSplitSharesDialog({
 
     const numericAmount = Number.parseFloat(amount)
     if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
-      setError('Enter a valid amount.')
+      setError(t('Enter a valid amount.'))
       return
     }
 
     if (!isWholeCentAmount(numericAmount)) {
-      setError('Amount must be in whole cents.')
+      setError(t('Amount must be in whole cents.'))
       return
     }
 
     const amountMicro = Math.floor(numericAmount * MICRO_UNIT + 1e-9)
     const availableMicro = Math.floor(numericAvailableBalance * MICRO_UNIT + 1e-9)
     if (amountMicro > availableMicro) {
-      setError('Amount exceeds available balance.')
+      setError(t('Amount exceeds available balance.'))
       return
     }
 
     if (!user?.proxy_wallet_address) {
-      toast.error('Deploy your proxy wallet before splitting shares.')
+      toast.error(t('Deploy your proxy wallet before splitting shares.'))
       return
     }
 
@@ -216,8 +216,8 @@ export default function EventSplitSharesDialog({
         return
       }
 
-      toast.success('Split shares', {
-        description: marketTitle ?? 'Request submitted.',
+      toast.success(t('Split shares'), {
+        description: marketTitle ?? t('Request submitted.'),
       })
 
       void queryClient.invalidateQueries({ queryKey: ['user-conditional-shares'] })
@@ -241,20 +241,26 @@ export default function EventSplitSharesDialog({
     }
     catch (error) {
       console.error('Failed to submit split operation.', error)
-      toast.error('We could not submit your split request. Please try again.')
+      toast.error(t('We could not submit your split request. Please try again.'))
     }
     finally {
       setIsSubmitting(false)
     }
   }
 
-  const dialogTitle = 'Split shares'
-  const dialogDescription = `Split a USDC into a share of ${t('Yes')} and ${t('No')}. You can do this to save cost by getting both and just selling the other side.`
+  const dialogTitle = t('Split shares')
+  const dialogDescription = t(
+    'Split a USDC into a share of {yes} and {no}. You can do this to save cost by getting both and just selling the other side.',
+    {
+      yes: t('Yes'),
+      no: t('No'),
+    },
+  )
   const formBody = (
     <>
       <div className="space-y-2">
         <label className="text-sm font-semibold text-foreground" htmlFor="split-shares-amount">
-          Amount
+          {t('Amount')}
         </label>
         <Input
           id="split-shares-amount"
@@ -266,7 +272,7 @@ export default function EventSplitSharesDialog({
         />
         <div className="text-xs text-muted-foreground">
           <span className="flex items-center gap-1">
-            Available:
+            {t('Available:')}
             <strong className="text-foreground">{formattedUsdcBalance}</strong>
             <span className="text-muted-foreground">USDC</span>
             <button
@@ -278,7 +284,7 @@ export default function EventSplitSharesDialog({
               onClick={handleMaxClick}
               disabled={numericAvailableBalance <= 0}
             >
-              Max
+              {t('Max')}
             </button>
           </span>
           {error && <p className="text-xs text-destructive">{error}</p>}
@@ -292,7 +298,7 @@ export default function EventSplitSharesDialog({
         disabled={isSubmitting || !conditionId}
         onClick={handleSubmit}
       >
-        {isSubmitting ? 'Splitting...' : 'Split Shares'}
+        {isSubmitting ? t('Splitting...') : t('Split Shares')}
       </Button>
     </>
   )

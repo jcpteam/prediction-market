@@ -4,9 +4,10 @@ import { useExtracted } from 'next-intl'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
-  UMA_CTF_ADAPTER_KUEST_ADDRESS,
+  UMA_CTF_ADAPTER_ADDRESS,
   UMA_CTF_ADAPTER_POLYMARKET_ADDRESS,
   UMA_NEG_RISK_ADAPTER_ADDRESS,
+  UMA_NEG_RISK_ADAPTER_POLYMARKET_ADDRESS,
 } from '@/lib/contracts'
 import { resolveUmaProposeTarget } from '@/lib/uma'
 import { normalizeAddress } from '@/lib/wallet'
@@ -27,7 +28,8 @@ const RESOLVER_GRADIENTS = [
 const UMA_RESOLVER_ADDRESS_SET = new Set(
   [
     UMA_CTF_ADAPTER_POLYMARKET_ADDRESS,
-    UMA_CTF_ADAPTER_KUEST_ADDRESS,
+    UMA_NEG_RISK_ADAPTER_POLYMARKET_ADDRESS,
+    UMA_CTF_ADAPTER_ADDRESS,
     UMA_NEG_RISK_ADAPTER_ADDRESS,
   ].map(address => address.toLowerCase()),
 )
