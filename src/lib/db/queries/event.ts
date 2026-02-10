@@ -6,10 +6,13 @@ import { cacheTags } from '@/lib/cache-tags'
 import { OUTCOME_INDEX } from '@/lib/constants'
 import { bookmarks } from '@/lib/db/schema/bookmarks/tables'
 import { conditions_audit, event_tags, events, markets, tags } from '@/lib/db/schema/events/tables'
+import {  polymarket_events, polymarket_markets, polymarket_outcomes } from '@/lib/db/schema/events/polymarket_table'
 import { runQuery } from '@/lib/db/utils/run-query'
 import { db } from '@/lib/drizzle'
 import { resolveDisplayPrice } from '@/lib/market-chance'
 import { getSupabaseImageUrl } from '@/lib/supabase'
+import { PolymarketEventRepository, polymarketEventResource } from '@/lib/db/queries/polymarket_events'
+import axios from "axios";
 
 const HIDE_FROM_NEW_TAG_SLUG = 'hide-from-new'
 
@@ -21,6 +24,33 @@ interface LastTradePriceEntry {
   token_id: string
   price: string
   side: 'BUY' | 'SELL'
+}
+
+interface FetchPriceBatchResult {
+  data: PriceApiResponse | null
+  aborted: boolean
+}
+
+function isPrerenderAbortError(error: unknown) {
+  if (!error || typeof error !== 'object') {
+    return false
+  }
+
+  const record = error as { digest?: string, name?: string, code?: string, message?: string }
+
+  if (record.digest === 'HANGING_PROMISE_REJECTION') {
+    return true
+  }
+
+  if (record.name === 'AbortError' || record.code === 'UND_ERR_ABORTED') {
+    return true
+  }
+
+  if (typeof record.message === 'string' && record.message.includes('fetch() rejects when the prerender is complete')) {
+    return true
+  }
+
+  return false
 }
 
 function normalizeTradePrice(value: string | undefined) {
@@ -40,30 +70,63 @@ function normalizeTradePrice(value: string | undefined) {
   return parsed
 }
 
-async function fetchPriceBatch(endpoint: string, tokenIds: string[]): Promise<PriceApiResponse | null> {
-  try {
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-      body: JSON.stringify(tokenIds.map(tokenId => ({
-        token_id: tokenId,
-      }))),
-      cache: 'no-store',
-    })
+async function fetchPriceBatch(endpoint: string, tokenIds: string[]): Promise<FetchPriceBatchResult> {
+  // try {
+  //   const response = await fetch(endpoint, {
+  //     method: 'POST',
+  //     headers: {
+  //       'Content-Type': 'application/json',
+  //       'Accept': 'application/json',
+  //     },
+  //     body: JSON.stringify(tokenIds.map(tokenId => ({
+  //       token_id: tokenId,
+  //     }))),
+  //   })
 
-    if (!response.ok) {
-      return null
+  //   if (!response.ok) {
+  //     return { data: null, aborted: false }
+  //   }
+
+  //   return { data: await response.json() as PriceApiResponse, aborted: false }
+  // }
+  // catch (error) {
+  //   const aborted = isPrerenderAbortError(error)
+  //   if (!aborted) {
+  //     console.error('Failed to fetch outcome prices batch from CLOB.', error)
+  //   }
+  //   return { data: null, aborted }
+  // }
+  try {
+    const https = await import("https");
+    const agent = new https.Agent({ family: 4, keepAlive: false });
+    const response = await axios.post<PriceApiResponse>(
+      endpoint,
+      tokenIds.map((tokenId) => ({ token_id: tokenId })),
+      {
+        httpsAgent: agent,
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        validateStatus: () => true, // Don't throw on any status code
+      },
+    );
+
+    // Check response status (axios doesn't check ok by default)
+    if (response.status >= 400) {
+      return { data: null, aborted: false };
     }
 
-    return await response.json() as PriceApiResponse
+    return { data: response.data as PriceApiResponse, aborted: false };
+  } catch (error) {
+    const aborted = isPrerenderAbortError(error);
+    if (!aborted) {
+      console.error("Failed to fetch outcome prices batch from CLOB.", error);
+    }
+    return { data: null, aborted };
   }
-  catch (error) {
-    console.error('Failed to fetch outcome prices batch from CLOB.', error)
-    return null
-  }
+
+
 }
 
 async function fetchLastTradePrices(tokenIds: string[]): Promise<Map<string, number>> {
@@ -76,6 +139,8 @@ async function fetchLastTradePrices(tokenIds: string[]): Promise<Map<string, num
   const endpoint = `${process.env.CLOB_URL!}/last-trades-prices`
   const lastTradeMap = new Map<string, number>()
 
+  console.log('Fetching last trade prices from:', endpoint)
+
   try {
     const response = await fetch(endpoint, {
       method: 'POST',
@@ -84,7 +149,6 @@ async function fetchLastTradePrices(tokenIds: string[]): Promise<Map<string, num
         'Accept': 'application/json',
       },
       body: JSON.stringify(uniqueTokenIds.map(tokenId => ({ token_id: tokenId }))),
-      cache: 'no-store',
     })
 
     if (!response.ok) {
@@ -100,7 +164,9 @@ async function fetchLastTradePrices(tokenIds: string[]): Promise<Map<string, num
     })
   }
   catch (error) {
-    console.error('Failed to fetch last trades prices', error)
+    if (!isPrerenderAbortError(error)) {
+      console.error('Failed to fetch last trades prices', error)
+    }
     return lastTradeMap
   }
 
@@ -148,12 +214,18 @@ async function fetchOutcomePrices(tokenIds: string[]): Promise<Map<string, Outco
   const endpoint = `${process.env.CLOB_URL!}/prices`
   const priceMap = new Map<string, OutcomePrices>()
   const missingTokenIds = new Set(uniqueTokenIds)
+  let wasAborted = false
 
   for (let i = 0; i < uniqueTokenIds.length; i += MAX_PRICE_BATCH) {
     const batch = uniqueTokenIds.slice(i, i + MAX_PRICE_BATCH)
-    const batchData = await fetchPriceBatch(endpoint, batch)
-    if (batchData) {
-      applyPriceBatch(batchData, priceMap, missingTokenIds)
+    const batchResult = await fetchPriceBatch(endpoint, batch)
+    if (batchResult.aborted) {
+      wasAborted = true
+      break
+    }
+
+    if (batchResult.data) {
+      applyPriceBatch(batchResult.data, priceMap, missingTokenIds)
       continue
     }
 
@@ -163,8 +235,16 @@ async function fetchOutcomePrices(tokenIds: string[]): Promise<Map<string, Outco
 
     for (const result of tokenResults) {
       if (result.status === 'fulfilled') {
-        applyPriceBatch(result.value, priceMap, missingTokenIds)
+        if (result.value.aborted) {
+          wasAborted = true
+          break
+        }
+        applyPriceBatch(result.value.data, priceMap, missingTokenIds)
       }
+    }
+
+    if (wasAborted) {
+      break
     }
   }
 
@@ -267,13 +347,13 @@ function eventResource(event: DrizzleEventResult, userId: string, priceMap: Map<
       icon_url: getSupabaseImageUrl(market.icon_url),
       condition: market.condition
         ? {
-            ...market.condition,
-            outcome_slot_count: Number(market.condition.outcome_slot_count || 0),
-            payout_denominator: market.condition.payout_denominator ? Number(market.condition.payout_denominator) : undefined,
-            volume: Number(market.condition.volume || 0),
-            open_interest: Number(market.condition.open_interest || 0),
-            active_positions_count: Number(market.condition.active_positions_count || 0),
-          }
+          ...market.condition,
+          outcome_slot_count: Number(market.condition.outcome_slot_count || 0),
+          payout_denominator: market.condition.payout_denominator ? Number(market.condition.payout_denominator) : undefined,
+          volume: Number(market.condition.volume || 0),
+          open_interest: Number(market.condition.open_interest || 0),
+          active_positions_count: Number(market.condition.active_positions_count || 0),
+        }
         : null,
     }
   })
@@ -323,6 +403,15 @@ function eventResource(event: DrizzleEventResult, userId: string, priceMap: Map<
   }
 }
 
+async function buildEventResource(eventResult: DrizzleEventResult, userId: string): Promise<Event> {
+  const outcomeTokenIds = (eventResult.markets ?? []).flatMap((market: any) =>
+    (market.condition?.outcomes ?? []).map((outcome: any) => outcome.token_id).filter(Boolean),
+  )
+
+  const priceMap = await fetchOutcomePrices(outcomeTokenIds)
+  return eventResource(eventResult, userId, priceMap)
+}
+
 function getEventMainTag(tags: any[] | undefined): string {
   if (!tags?.length) {
     return 'World'
@@ -334,13 +423,13 @@ function getEventMainTag(tags: any[] | undefined): string {
 
 export const EventRepository = {
   async listEvents({
-    tag = 'trending',
-    search = '',
-    userId = '',
-    bookmarked = false,
-    status = 'active',
-    offset = 0,
-  }: ListEventsProps): Promise<QueryResult<Event[]>> {
+                     tag = 'trending',
+                     search = '',
+                     userId = '',
+                     bookmarked = false,
+                     status = 'active',
+                     offset = 0,
+                   }: ListEventsProps): Promise<QueryResult<Event[]>> {
     'use cache'
     cacheTag(cacheTags.events(userId))
 
@@ -566,8 +655,6 @@ export const EventRepository = {
   },
 
   async getEventConditionChangeLogBySlug(slug: string): Promise<QueryResult<ConditionChangeLogEntry[]>> {
-    'use cache'
-
     return runQuery(async () => {
       const eventResult = await db
         .select({ id: events.id })
@@ -580,7 +667,6 @@ export const EventRepository = {
       }
 
       const eventId = eventResult[0]!.id
-      cacheTag(cacheTags.event(eventId))
 
       const rows = await db
         .select({
@@ -702,48 +788,90 @@ export const EventRepository = {
   },
 
   async getEventBySlug(slug: string, userId: string = ''): Promise<QueryResult<Event>> {
-    'use cache'
-
     return runQuery(async () => {
-      const eventResult = await db.query.events.findFirst({
-        where: eq(events.slug, slug),
-        with: {
-          markets: {
-            with: {
-              condition: {
-                with: { outcomes: true },
-              },
-            },
-          },
-          eventTags: {
-            with: { tag: true },
-          },
-          ...(userId && {
-            bookmarks: {
-              where: eq(bookmarks.user_id, userId),
-            },
-          }),
-        },
-      }) as DrizzleEventResult
+      //     const eventResult = await db.query.events.findFirst({
+      //       where: eq(events.slug, slug),
+      //       with: {
+      //         markets: {
+      //           with: {
+      //             condition: {
+      //               with: { outcomes: true },
+      //             },
+      //           },
+      //         },
+      //         eventTags: {
+      //           with: { tag: true },
+      //         },
+      //         ...(userId && {
+      //           bookmarks: {
+      //             where: eq(bookmarks.user_id, userId),
+      //           },
+      //         }),
+      //       },
+      //     }) as DrizzleEventResult
 
-      if (!eventResult) {
+      //     if (!eventResult) {
+      //       throw new Error('Event not found')
+      //     }
+
+      //     const transformedEvent = await buildEventResource(eventResult as DrizzleEventResult, userId)
+
+      //     return { data: transformedEvent, error: null }
+      // })
+
+      // Query polymarket_events table
+      const eventResult = await db
+        .select()
+        .from(polymarket_events)
+        .where(eq(polymarket_events.slug, slug))
+        .limit(1)
+
+      if (!eventResult.length) {
         throw new Error('Event not found')
       }
 
-      const outcomeTokenIds = (eventResult.markets ?? []).flatMap((market: any) =>
-        (market.condition?.outcomes ?? []).map((outcome: any) => outcome.token_id).filter(Boolean),
-      )
+      const polymarketEvent = eventResult[0]
 
-      const priceMap = await fetchOutcomePrices(outcomeTokenIds)
-      const transformedEvent = eventResource(
-        eventResult as DrizzleEventResult,
-        userId,
-        priceMap,
-      )
+      // Fetch markets for this event
+      const markets = await db
+        .select()
+        .from(polymarket_markets)
+        .where(eq(polymarket_markets.event_id, polymarketEvent.id))
 
-      cacheTag(cacheTags.event(`${transformedEvent.id}:${userId}`))
+      // Fetch outcomes for these markets
+      const conditionIds = markets
+        .map(m => m.condition_id)
+        .filter(Boolean) as string[]
 
-      return { data: transformedEvent, error: null }
+      let outcomes: (typeof polymarket_outcomes.$inferSelect)[] = []
+      if (conditionIds.length > 0) {
+        outcomes = await db
+          .select()
+          .from(polymarket_outcomes)
+          .where(inArray(polymarket_outcomes.condition_id, conditionIds))
+      }
+
+      // Build the complete event structure with relationships
+      const eventWithMarkets = {
+        ...polymarketEvent,
+        polymarket_markets: markets.map(market => ({
+          ...market,
+          outcomes: outcomes.filter(o => o.condition_id === market.condition_id),
+        })),
+      }
+
+      // Fetch prices for all outcomes
+      const tokensForPricing = eventWithMarkets.polymarket_markets
+        .flatMap(market =>
+          (market.outcomes ?? []).map(outcome => outcome.token_id).filter(Boolean),
+        )
+
+      const priceMap = await fetchOutcomePrices(tokensForPricing)
+
+      // Transform polymarket event to Event format
+      const event = polymarketEventResource(eventWithMarkets, priceMap)
+
+      return { data: event, error: null }
     })
   },
 
@@ -850,6 +978,7 @@ export const EventRepository = {
         .filter((tokenId): tokenId is string => Boolean(tokenId))
       const priceMap = await fetchOutcomePrices(tokenIds)
       const lastTradesByToken = await fetchLastTradePrices(tokenIds)
+      // const lastTradesByToken = await PolymarketEventRepository.fetchLastTradePrices(tokenIds)
 
       const transformedResults = topResults.map((row) => {
         const price = row.yes_token_id ? priceMap.get(row.yes_token_id) : undefined

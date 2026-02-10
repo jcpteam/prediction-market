@@ -38,7 +38,7 @@ const config: NextConfig = {
         : process.env.VERCEL_URL
           ? `https://${process.env.VERCEL_URL}`
           : 'http://localhost:3000',
-    CLOB_URL: 'https://clob.kuest.com',
+    CLOB_URL: 'https://clob.polymarket.com',
     RELAYER_URL: 'https://relayer.kuest.com',
     DATA_URL: 'https://data-api.kuest.com',
     USER_PNL_URL: 'https://user-pnl-api.kuest.com',
