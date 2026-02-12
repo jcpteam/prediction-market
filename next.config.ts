@@ -3,6 +3,9 @@ import { createMDX } from 'fumadocs-mdx/next'
 import createNextIntlPlugin from 'next-intl/plugin'
 
 const config: NextConfig = {
+  experimental: {
+    dynamicIO: true,
+  } as any,
   cacheComponents: true,
   typedRoutes: true,
   reactStrictMode: false,
